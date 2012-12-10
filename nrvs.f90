@@ -2,16 +2,19 @@ program nrvs
 
    implicit none
    integer nat,iat
-   parameter(nat=966)
+   parameter(nat=36)
    real freq(3*nat), vec(3*nat,3*nat), mass(3*nat), num, den, int(3*nat), &
          gau, f, s, rmass(3*nat), x(3*nat), massr(nat)
    integer iset,i,j,jat,l,k,nmodes,il,imass(3*nat),nat3,mode
    character(len=18) label(3*nat)
-   logical adf, g03, jaguar
+   character(len=256) line
+   character(len=2) atsymb
+   logical adf, gaussian, jaguar, orca
 
 adf = .false.
-g03 = .false.
+gaussian = .false.
 jaguar = .false.
+orca = .true.
 
 if (adf) then
    i = 0
@@ -63,7 +66,7 @@ if (adf) then
    end do
    nmodes = 3*nat-6
 
-else if( g03 ) then
+else if( gaussian ) then
    i = 0
    do iset=1,(3*nat-6)/5
 
@@ -80,7 +83,7 @@ else if( g03 ) then
       end do
       i = i + 5
    end do
-   nmodes = i-1
+   nmodes = i
 
    do j=1,3*nat
       if( imass(j) == 26 ) then
@@ -98,6 +101,68 @@ else if( g03 ) then
 
       do i=1,nmodes
          vec(j,i) = vec(j,i)/sqrt(rmass(i))
+      end do
+   end do
+
+else if( orca ) then
+
+   do i=1,99999
+      read(5,'(a)', end=99) line
+         if( line(1:23) .eq. 'MULLIKEN ATOMIC CHARGES' ) exit
+   end do
+   read(5,*)
+   j = 0
+   do i=1,nat
+      read(5,'(5x,a2)') atsymb
+      if( atsymb == 'H ') then
+         mass(j+1:j+3) = 1.008
+      else if( atsymb == 'C ') then
+         mass(j+1:j+3) = 12.010
+      else if( atsymb == 'N ') then
+         mass(j+1:j+3) = 14.001
+      else if( atsymb == 'O ') then
+         mass(j+1:j+3) = 16.00
+      else if( atsymb == 'Rh') then
+         mass(j+1:j+3) = 102.91
+      else
+         write(0,*) 'unknown element: ',atsymb
+         stop
+      end if
+!     write(0,*) i, mass(i)
+      j = j + 3
+   end do
+   do i=1,99999
+      read(5,'(a)', end=99) line
+         if( line(1:23) .eq. 'VIBRATIONAL FREQUENCIES' ) exit
+   end do
+   read(5,*)
+   read(5,*)
+   do i=1,3*nat
+      read(5,'(8x,f10.2)') freq(i)
+      if( i > 6 ) freq(i-6) = freq(i)
+   end do
+   do i=1,10
+      read(5,*)
+   end do
+   i = 0
+   do iset=1,(3*nat)/6
+      read(5,*)
+      do j=1,3*nat
+         read(5,*) jat, vec(j,i+1),vec(j,i+2),vec(j,i+3),  &
+                        vec(j,i+4),vec(j,i+5),vec(j,i+6)
+      end do
+      i = i + 6
+      if( iset == 1 ) i=0
+   end do
+   nmodes = i
+   do i=1,nmodes
+      num = 0.0
+      do k = 1,3*nat
+         num = num + mass(k)*vec(k,i)*vec(k,i)
+      end do
+      num = 1./sqrt(num)
+      do k = 1,3*nat
+         vec(k,i) = num*vec(k,i)
       end do
    end do
 
@@ -197,14 +262,12 @@ end if
 !  get the intensity factor for the Fe atoms
 
    do i=1,nmodes
-      den = 0.0
       num = 0.0
       do j=1,3*nat
-         den = den + mass(j)*vec(j,i)*vec(j,i)
-         if( abs(mass(j)-55.85)<0.1 ) num = num + mass(j)*vec(j,i)*vec(j,i)
+         if( abs(mass(j)-102.91)<0.1 ) num = num + mass(j)*vec(j,i)*vec(j,i)
       end do
-      int(i) = num/den
-      write(6,'(i4,4f10.3)') i, freq(i), num, den, num/den
+      int(i) = num
+      write(6,'(i4,2f10.3)') i, freq(i), num
    end do
 
 !  now, convolute this with an 8 cm**-1 Gaussian: naive implementation for now
@@ -218,5 +281,9 @@ end if
       end do
       write(6,'(f6.1,f10.4)' ) f, s
    end do
+   stop
+
+99 write(0,*) 'end of file found on input'
+   stop
 
 end program nrvs

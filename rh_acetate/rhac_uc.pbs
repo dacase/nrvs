@@ -1,0 +1,16 @@
+#!/bin/bash -f
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=72:00:00
+#PBS -l mem=1024mb
+#PBS -j oe
+
+cd /home/case/fes/rh_acetate
+
+export g09root=/net/cottusp/opt/gaussian/g09revA02_amd64
+
+source $g09root/g09/bsd/g09.profile
+mkdir -p /u1/scratch/case
+export GAUSS_SCRDIR=/u1/scratch/case
+
+$g09root/g09/g09 rhac_uc.com 
+

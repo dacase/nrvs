@@ -1,0 +1,38 @@
+#!/bin/bash
+JOB=$1
+STARTDIR=`pwd`
+
+cat <<EOF > $1.pbs
+#!/bin/bash -f
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=72:00:00
+#PBS -l mem=2048mb
+#PBS -j oe
+
+cd $STARTDIR
+mkdir -p /u1/scratch/case
+cp $JOB.inp $JOB.pos /u1/scratch/case
+if [ -r $JOB.gbw ]; then
+   /bin/cp -p $JOB.gbw /u1/scratch/case
+fi
+
+cd /u1/scratch/case
+/home/case/qchem/orca_3_0_1_linux_x86-64/orca $JOB.inp > $STARTDIR/$JOB.out 
+if [ -r $JOB.gbw ]; then
+   /bin/cp -p $JOB.gbw $STARTDIR
+fi
+if [ -r $JOB.ges ]; then
+   /bin/cp -p $JOB.ges $STARTDIR
+fi
+if [ -r $JOB.xyz ]; then
+   /bin/cp -p $JOB.xyz $STARTDIR
+fi
+/bin/rm -f $JOB.gbw
+/bin/rm -f $JOB.ges
+/bin/rm -f $JOB.inp
+/bin/rm -f $JOB.pos
+/bin/rm -f $JOB.prop
+
+EOF
+
+/usr/local/bin/qsub $1.pbs 

@@ -1,0 +1,10 @@
+#!/bin/bash
+JOB=$1
+
+export g09root=/net/cottusp/opt/gaussian/g09revA02_amd64
+
+source $g09root/g09/bsd/g09.profile
+#mkdir -p /scratch/case
+export GAUSS_SCRDIR=/scratch/case
+
+$g09root/g09/g09 $JOB.com 

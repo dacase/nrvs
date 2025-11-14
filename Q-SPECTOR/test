@@ -1,0 +1,19 @@
+\texttt{\\
+output\\
+spectra [IR,VCD,PVDOS,KEDSTRETCH,KEDBEND]\\
+shape [SIGMA GAMMA]\\ 
+range START STOP\\
+resolution RES\\
+\\
+selection\\
+element1 [E1_1 E1_2 ...]\\
+element2 [E2_1 E2_2 ...]\\
+element3 [E3_1 E3_2 ...]\\
+weight1 [W1_1 W1_2 ...]\\
+weight2 [W2_1 W2_2 ...]\\
+weight3 [W3_1 W3_2 ...]\\
+label1 [L1_1 L1_2 ...]\\
+label2 [L2_1 L2_2 ...]\\
+label3 [L3_1 L3_2 ...]\\
+cutoff CUTOFF\\
+}

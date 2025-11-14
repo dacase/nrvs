@@ -1,0 +1,307 @@
+\documentclass[10pt]{article}
+\usepackage[dvips]{graphicx}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\usepackage{eucal}
+\usepackage{amssymb,amsmath}
+\usepackage{booktabs}
+\usepackage{citesort}
+\usepackage{url}
+\usepackage{multirow}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\baselineskip=20pt
+
+\begin{center}
+{\bf \huge Using \textsf{Q-SPECTOR}}
+  
+\vskip 30pt
+ 
+\noindent
+by Vladimir Pelmenschikov$^{*}$, David A. Case, and Louis Noodleman 
+ 
+\vskip 10pt
+ 
+\noindent
+Contribution from the Department of Molecular Biology, TPC15, The
+Scripps Research Institute, 10550 North Torrey Pines Road, La Jolla,
+California 92037
+
+\vskip 10pt
+
+\today
+
+\vskip 10pt
+
+\end {center}
+
+\noindent $^{*}$contact author; e-mail: vovan@scripps.edu
+
+\vskip 30pt
+ 
+\noindent
+{\bf Abstract:} \textsf{Q-SPECTOR} is a Python program to analyse vibrational outputs from 
+several mainstream computational chemistry software. \textsf{Q-SPECTOR} 
+can build spectra based on the computed intensities (IR and VCD). \textsf{Q-SPECTOR} also generates 
+PVDOS (Partial Vibrational Density od States) and {\it approximate} KED (Kinetic Energy Distribution) spectra based on 
+cartesian displacements of the normal modes. The current version \textsf{Q-SPECTOR v1.5} KED function detects bond 
+stretching and valence angle bending motions, and torsional angle detection is in the development. 
+The program has very flexible interface for PVDOS and KED atoms selection (based on atomic labels, weights, or elements). 
+'Stick' spectra are broadened using the pseudo-Voigt profile, 
+with limiting cases of Gaussian or Lorentz broadening available as well. The current version has \textsf{GAUSSIAN} and 
+\textsf{AMBER} vibrational output reading modules; support for \textsf{ADF} and \textsf{JAGUAR} is under the way. 
+
+\newpage
+ 
+\noindent
+{\bf I. Introduction}
+..no internal coordinates mess... in MM the force constants are defined, and in QC there are no bond stretch or angle bending 
+force constants as such.
+
+\vskip 30pt 
+
+\noindent
+{\bf II. Partial Vibrational Density of States (PVDOS) Analysis.}
+
+\vskip 10pt
+PVDOS can be characterized via the corresponding mode composition factor $e^2_{j\alpha}$. By the definition, $e^2_{j\alpha}$ is equal to the $<T_{j\alpha}>$ fraction of the ($<...>$ averaged) kinetic energy stored in motion of atom $j$ $(=1,2,...,N)$ in the normal vibrational mode $\alpha$ $(=1,2,...,3N-6)$:
+\begin{equation}
+\label{eq:modecompfactordef}
+e^2_{j\alpha} = \frac{<T_{j\alpha}>}{\sum<T_{i\alpha}>} 
+\end{equation}
+The mode composition factor is related to the atomic masses $m_j$ and normal mode displacement vectors $\boldsymbol{r}_{j\alpha}$ 
+via the well-known formula: 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:modecompfactor}
+e^2_{j\alpha} = \frac{m_j \boldsymbol{r}^2_{j\alpha}}{\sum m_i\boldsymbol{r}^2_{i\alpha}} 
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The above equation \ref{eq:modecompfactor} can be easily proven using the following three relations of the classic harmonic motion.
+First, the average kinetic energy $<T_{j\alpha}>$ is equal to the average potential energy $<U_{j\alpha}>$ according to the virial theorem, 
+thus being a half of the full energy of the oscillator $E_{j\alpha}$ $(= <E_{j\alpha}>)$ :
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:virial}
+<T_{j\alpha}> = <U_{j\alpha}> = \frac{1}{2} E_{j\alpha}
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Second, the full energy of the oscillator $E_{j\alpha}$ is:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:full}
+E_{j\alpha} = U_{j\alpha}\Big\lvert_{T_{j\alpha} = 0} = \frac{1}{2} k_{j\alpha} \boldsymbol{r}^2_{j\alpha}  
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+where $k_{j\alpha}$ is the force constant for the motion of atom $j$ in mode $\alpha$. Third, $k_{j\alpha}$ and $m_j$ of atom $j$ are 
+connected via the frequency of the mode, $f_\alpha$:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:freq}
+f_\alpha = \frac{1}{2\pi} \sqrt{\frac{k_{j\alpha}}{m_j}}
+\end{equation} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Collecting equations \ref{eq:modecompfactordef} and \ref{eq:virial} through \ref{eq:freq}, we obtain the neccessary relation \ref{eq:modecompfactor}
+used to calculate PVDOS in \textsf{Q-SPECTOR}.  
+
+\vskip 30pt 
+ 
+\noindent
+{\bf III. Kinetic Energy Distribution (KED) Analysis}
+
+\vskip 5pt 
+
+Notably, atomic PVDOS considered above is essentially equivalent to the single atom KED. However, KED is normally considered as kinetic energy stored in a stretching,
+bending, or torsional vibration. Calculating kinetic energies associated with these types of oscillations would involve coupling displacements of at least two atoms. 
+Consideration of a covalently bonded atom pair (either as a fragment of a large molecule or in a diatomic molecule) 
+will be essential for the stretching and bending KED analysis following in subsections below.   
+
+\vskip 5pt
+
+{\bf III.a. Atom pairs.} For the two atoms 1 and 2, the displacement vector 
+$\boldsymbol{r}_{\textrm{CM}}$ of the Center of Mass of the 1-2 pair (CM) is given via formula (here, the normal mode index is omitted for clarity):
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:CM}       
+\boldsymbol{r}_{\textrm{1-2}} = \frac{m_1\boldsymbol{r}_{1} + m_2\boldsymbol{r}_{2}}{m_1 + m_2}   
+\end{equation} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Using \ref{eq:CM}, atom 1 and 2 displacement vectors $\boldsymbol{r}_{1_{\textrm{1-2}}}$ and 
+$\boldsymbol{r}_{2_{\textrm{1-2}}}$ in the system moving with the center of mass of 1-2 pair are:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{eqnarray}
+\label{eq:r12CM}
+\boldsymbol{r}_{1_{\textrm{1-2}}} =  \boldsymbol{r}_{1} - \boldsymbol{r}_{\textrm{1-2}} =  
+\frac{m_2(\boldsymbol{r}_{1} - \boldsymbol{r}_{2})}{m_1 + m_2} \\
+\boldsymbol{r}_{2_{\textrm{1-2}}}  =  \boldsymbol{r}_{2} - \boldsymbol{r}_{\textrm{1-2}} =  
+\frac{m_1(\boldsymbol{r}_{2} - \boldsymbol{r}_{1})}{m_1 + m_2}\nonumber 
+\end{eqnarray}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Finally, according to equation \ref{eq:r12CM} the collective KED factor associated with the two atoms oscillations relatively to the center of mass 
+would be (cf equation \ref{eq:modecompfactor}):
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{align}
+\label{eq:12KED}
+m_1\boldsymbol{r}^2_{1_{\textrm{1-2}}} + m_2\boldsymbol{r}^2_{2_{\textrm{1-2}}} & = 
+\frac{m_1 m_2}{m_1 + m_2} \boldsymbol{r}_{12}^2  \\
+\textrm{where} \ \boldsymbol{r}_{12} & = \boldsymbol{r}_{1} - \boldsymbol{r}_{2}\nonumber 
+\end{align}  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The importance of equation \ref{eq:12KED} will be obvious from the following subsections. 
+
+\vskip 5pt
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t]
+\centering{\includegraphics[width=0.5\textwidth,angle=0]
+{/home/vovan/EDIT/Q-SPECTOR/stretch-labels.eps}}
+\caption{A schematic representation of $\boldsymbol{r}_{1_{\textrm{1-2}}\parallel}$ and $\boldsymbol{r}_{2_{\textrm{1-2}}\parallel}$ 
+displacement vectors
+used to calculate a bond stretch KED in \textsf{Q-SPECTOR}. Vectors $\boldsymbol{R}_{12}$ and $\boldsymbol{R}_{1^{\prime}2^{\prime}}$ 
+connect the two atoms in their equilibrium positions (points 1 and 2) and after the displacement is applied (points $1^{\prime}$ and $2^{\prime}$).
+All the vectors are given relatively to the 1-2 ($1^{\prime}$-$2^{\prime}$) center of mass reference system.}
+\label{fig:stretch}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\bf III.b. Valence Bond Stretching KED.} 
+Here we will do the following approximation for the bond stretching: 
+the kinetic energy stored in 1-2 stretch vibration (assuming the two atoms 1 and 2 covalently bound) results from {\it projections} 
+$\boldsymbol{r}_{1_{\textrm{1-2}}\parallel}$ and $\boldsymbol{r}_{2_{\textrm{1-2}}\parallel}$ of their
+displacement vectors $\boldsymbol{r}_{1_{\textrm{1-2}}}$ and $\boldsymbol{r}_{2_{\textrm{1-2}}}$ on the vector $\boldsymbol{R}_{12}$ 
+connecting these two atoms equilibrium positions, see Figure \ref{fig:stretch}. Notably, the displacements are considered relatively to the 1-2 pair center of mass. 
+The bond stretch kinetic energy is then proportional to the sum of 1 and 2 kinetic energies (cf equation \ref{eq:modecompfactor}) resulting from 
+the $\boldsymbol{r}_{1_{\textrm{1-2}}\parallel}$ and $\boldsymbol{r}_{2_{\textrm{1-2}}\parallel}$ displacements:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:12stretchKED}
+m_1\boldsymbol{r}^2_{1_{\textrm{1-2}}\parallel} + m_2\boldsymbol{r}^2_{2_{\textrm{1-2}}\parallel} = 
+\frac{m_1 m_2}{m_1 + m_2}\boldsymbol{r}_{12\parallel}^2
+\end{equation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+where $\boldsymbol{r}_{12\parallel}$ is the projection of $\boldsymbol{r}_{1}-\boldsymbol{r}_{2}$ 
+normal mode displacement vectors difference onto $\boldsymbol{R}_{12}$. 
+The right side of equation \ref{eq:12stretchKED} is derived using equations \ref{eq:r12CM} and \ref{eq:12KED}. Finally, 
+using equations \ref{eq:modecompfactor} and \ref{eq:12stretchKED}, 
+1-2 stretch KED composition factor $e^2_{12\alpha}$ for the mode index $\alpha$ is (the notation is analogous to $e^2_{j\alpha}$):
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:KEDstretchfactor}
+e^2_{12\alpha} = \frac{\frac{m_1 m_2}{m_1 + m_2}\boldsymbol{r}_{12\alpha\parallel}^2}{\sum m_i\boldsymbol{r}^2_{i\alpha}} 
+\end{equation}   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Equation \ref{eq:KEDstretchfactor} is used to calculate 1-2 valence bond stretch KED in \textsf{Q-SPECTOR}. The list of 
+$e^2_{12\alpha}$ values obtained for all $\alpha$ can be used to analyse where 1-2 stretch vibrations occur along the vibraional 
+modes range, and what is their relative weight. To generate KED stretch spectra, \textsf{Q-SPECTOR} applies broadening to $e^2_{12\alpha}$ list.
+It is easy to show that equation \ref{eq:KEDstretchfactor} results in $e^2_{12}$ = 1 for a diatomic molecule vibrational mode, 
+using $\boldsymbol{r}_{12\parallel} =\boldsymbol{r}_{12}$ and $\boldsymbol{r}_2 = -\frac{m_1}{m_2} \boldsymbol{r}_1$. 
+This reflects proper behavior of formula \ref{eq:KEDstretchfactor} in case when 100$\%$ of the mode vibrational energy is stored in 1-2 stretch. 
+
+\vskip 5pt
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t]
+\centering{\includegraphics[width=\textwidth,angle=0]
+{/home/vovan/EDIT/Q-SPECTOR/bend.eps}}
+\caption{{\bf a}: a schematic representation of $\boldsymbol{r}_{1_{\textrm{1-2}}\parallel}$ and $\boldsymbol{r}_{2_{\textrm{1-2}}\parallel}$ 
+displacement vectors used to calculate valence and torsional angle bendings in \textsf{Q-SPECTOR}. {\bf b}: a schematic representation of 
+$\boldsymbol{r}_{1_{\textrm{1-2}}\perp_{{\textrm{1-2-3}}\parallel}}$ displacement contribution to 1-2-3 angle bending.}
+\label{fig:bend}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+{\bf III.b. Valence Angle Bending KED.} 
+Describing 1-2-3 valence angle bending, where 1-2 and 2-3 atom pairs are assumed to be bound, 
+we first naturally suppose that bending (in contrast to stretching, see above) comes from the displacements, perpendicular to the 1-2 and 2-3 bonding vectors 
+$\boldsymbol{R}_{21}$ and $\boldsymbol{R}_{23}$. These normal displacements will be denoted $\boldsymbol{r}_{1_{\textrm{1-2}}\perp}$ and $\boldsymbol{r}_{2_{\textrm{1-2}}\perp}$ for 1-2 pair, see Figure \ref{fig:bend}, 
+and $\boldsymbol{r}_{2_{\textrm{2-3}}\perp}$ and $\boldsymbol{r}_{3_{\textrm{2-3}}\perp}$ for 2-3 pair. Notably, 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:parallel+perp}
+\boldsymbol{r}_{i_{i-j}} = \boldsymbol{r}_{i_{i-j}\parallel} + \boldsymbol{r}_{i_{i-j}\perp}
+\end{equation}   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+1-2-3 valence angle bending is also limited to the displacements which occur within the plane formed by the three atoms 1-2-3. One more 
+The second step of projection should be done, removing those components of displacements which are normal to the 1-2-3 plane 
+(the normal components can be used for the description of torsional contributions to KED, see below). 
+Following our notation scheme, $\boldsymbol{r}_{1_{\textrm{1-2}}\perp}$
+when projected onto 1-2-3 plane would be called $\boldsymbol{r}_{1_{\textrm{1-2}}\perp_{{\textrm{1-2-3}}\parallel}}$, see Figure \ref{fig:bend}.  
+Then the amount of kinetic energy stored in 1-2-3 angle bending motion can be approximated as sum of 1-2 and 2-3 'bending' 
+components (cf. equation \ref{eq:12stretchKED}), given below:
+\begin{eqnarray}
+\label{eq:bendKED}
+m_1\boldsymbol{r}^2_{1_{\textrm{1-2}}\perp_{{\textrm{1-2-3}}\parallel}} + m_2\boldsymbol{r}^2_{2_{\textrm{1-2}}\perp_{{\textrm{1-2-3}}\parallel}} = 
+\frac{m_1 m_2}{m_1 + m_2} \boldsymbol{r}_{12\perp_{\textrm{1-2-3}\parallel}}^2\\
+m_2\boldsymbol{r}^2_{2_{\textrm{2-3}}\perp_{{\textrm{1-2-3}}\parallel}} + m_3\boldsymbol{r}^2_{3_{\textrm{2-3}}\perp_{{\textrm{1-2-3}}\parallel}} = 
+\frac{m_2 m_3}{m_2 + m_3} \boldsymbol{r}_{23\perp_{\textrm{1-2-3}\parallel}}^2\nonumber
+\end{eqnarray}
+where $\boldsymbol{r}_{12\perp_{\textrm{1-2-3}\parallel}}$ is the component of $\boldsymbol{r}_{1}-\boldsymbol{r}_{2}$
+normal mode displacement vectors difference normal to $\boldsymbol{R}_{12}$, further projected onto the 1-2-3 plane.   
+For mode index $\alpha$, the fraction of kinetic energy stored in 1-2-3 angle bending then can be written as follows :
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{equation}
+\label{eq:KEDbendfactor}
+e^2_{123\alpha} = \frac{\frac{m_1 m_2}{m_1 + m_2}\boldsymbol{r}_{12\alpha\perp_{\textrm{1-2-3}\parallel}}^2 + 
+\frac{m_2 m_3}{m_2 + m_3}\boldsymbol{r}_{23\alpha\perp_{\textrm{1-2-3}\parallel}}^2}{\sum m_i\boldsymbol{r}^2_{i\alpha}} 
+\end{equation}   
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+...
+\vskip 30pt 
+
+\newpage 
+
+\noindent
+{\bf IV. \textsf{Q-SPECTOR} Input File and Usage.} The input (instructions) file format is as follows:
+
+\vskip 5pt 
+
+\texttt{
+\begin{tabular}{l}
+\&output\\
+spectra [IR,VCD,PVDOS,KEDSTRETCH,KEDBEND]\\
+shape [SIGMA GAMMA]\\ 
+range START STOP\\
+resolution RES\\
+\&\\
+\&selection\\
+element1 [E1\_1 E1\_2 ...]\\
+element2 [E2\_1 E2\_2 ...]\\
+element3 [E3\_1 E3\_2 ...]\\
+weight1 [W1\_1 W1\_2 ...]\\
+weight2 [W2\_1 W2\_2 ...]\\
+weight3 [W3\_1 W3\_2 ...]\\
+label1 [L1\_1 L1\_2 ...]\\
+label2 [L2\_1 L2\_2 ...]\\
+label3 [L3\_1 L3\_2 ...]\\
+cutoff CUTOFF\\
+\&\\
+\end{tabular}
+}
+\vskip 20pt
+\noindent
+...the above format is to be explained...
+ 
+\vskip 5pt
+
+\noindent
+Using \textsf{Q-SPECTOR} on input.qsp with \textsf{GAUSSIAN} outputfile :\\
+\texttt{>Q-Spector-1.5.4.py GAUSSIAN input.qsp output.g03out output.dat}\\ 
+which results in output.dat spectrum data file. The output data has two column format, where the first column is the wavenumber (cm$^{-1}$) and the second is intensity.  
+
+\vskip 30pt
+
+\noindent
+{\bf Appendix}
+
+\vskip 5pt 
+
+Exact formulae for projected displacement differences $\boldsymbol{r}_{12\parallel}$ and $\boldsymbol{r}_{12\perp_{\textrm{1-2-3}\parallel}}$ 
+used to calculate $e^2_{12\alpha}$ (equation \ref{eq:KEDstretchfactor}) and $e^2_{123\alpha}$ (equation \ref{eq:KEDbendfactor}), correspondingly.
+...
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\bibliographystyle{achemso}
+\bibliographystyle{jpc}
+\bibliography{nitrogenase}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

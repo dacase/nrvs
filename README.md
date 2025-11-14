@@ -1,0 +1,3 @@
+Simple Fortran code to process NRVS spectra from quantum chemistry calculations.
+
+No examples or documentation yet.  Maybe in the future....

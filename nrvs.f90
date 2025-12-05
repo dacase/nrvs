@@ -2,7 +2,7 @@ program nrvs
 
    implicit none
    integer nat,iat
-   parameter(nat=36)
+   parameter(nat=83)
    real freq(3*nat), vec(3*nat,3*nat), mass(3*nat), num, den, int(3*nat), &
          gau, f, s, rmass(3*nat), x(3*nat), massr(nat)
    integer iset,i,j,jat,l,k,nmodes,il,imass(3*nat),nat3,mode
@@ -108,12 +108,11 @@ else if( orca ) then
 
    do i=1,99999
       read(5,'(a)', end=99) line
-         if( line(1:23) .eq. 'MULLIKEN ATOMIC CHARGES' ) exit
+         if( line(7:12) .eq. '* xyz ' ) exit
    end do
-   read(5,*)
    j = 0
    do i=1,nat
-      read(5,'(5x,a2)') atsymb
+      read(5,'(8x,a2)') atsymb
       if( atsymb == 'H ') then
          mass(j+1:j+3) = 1.008
       else if( atsymb == 'C ') then
@@ -122,8 +121,10 @@ else if( orca ) then
          mass(j+1:j+3) = 14.001
       else if( atsymb == 'O ') then
          mass(j+1:j+3) = 16.00
-      else if( atsymb == 'Rh') then
-         mass(j+1:j+3) = 102.91
+      else if( atsymb == 'S ') then
+         mass(j+1:j+3) = 32.00
+      else if( atsymb == 'Fe') then
+         mass(j+1:j+3) = 57.0
       else
          write(0,*) 'unknown element: ',atsymb
          stop
@@ -131,12 +132,14 @@ else if( orca ) then
 !     write(0,*) i, mass(i)
       j = j + 3
    end do
+
    do i=1,99999
       read(5,'(a)', end=99) line
          if( line(1:23) .eq. 'VIBRATIONAL FREQUENCIES' ) exit
    end do
-   read(5,*)
-   read(5,*)
+   do i=1,4
+      read(5,*)
+   end do
    do i=1,3*nat
       read(5,'(8x,f10.2)') freq(i)
       if( i > 6 ) freq(i-6) = freq(i)
@@ -264,15 +267,15 @@ end if
    do i=1,nmodes
       num = 0.0
       do j=1,3*nat
-         if( abs(mass(j)-102.91)<0.1 ) num = num + mass(j)*vec(j,i)*vec(j,i)
+         if( abs(mass(j)-57.0)<0.1 ) num = num + mass(j)*vec(j,i)*vec(j,i)
       end do
       int(i) = num
-      write(6,'(i4,2f10.3)') i, freq(i), num
+      write(6,'(2f10.3)') freq(i), num
    end do
 
 !  now, convolute this with an 8 cm**-1 Gaussian: naive implementation for now
 
-   do k=1,800
+   do k=1,650
       f = k
       s = 0.0
       do i=1,nmodes

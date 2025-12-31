@@ -6,7 +6,7 @@ program convolute
 
    implicit none
    integer i,k,nmodes
-   real freq(1000), int(1000), gau, f, s
+   real freq(1000), int(1000), gau, f, s, int_comp(1000), int_vdos(1000)
    character(len=7) label
    character(len=256) line,basename
 
@@ -14,6 +14,28 @@ program convolute
    open(unit=5,file=trim(basename)//'.ovout')
    open(unit=6,file=trim(basename)//'.nrvs.dat')
    open(unit=7,file=trim(basename)//'.nrvs.stk')
+
+   do i=1,99999
+      read(5,'(a)', end=99) line
+         if( line(1:38) .eq. 'Fe(57) NORMAL MODE COMPOSITION FACTORS' ) exit
+   end do
+   do i=1,3
+      read(5,*)
+   end do
+   do i=1,248
+      read(5,'(9x,f11.6)') int_comp(i)
+   end do
+
+   do i=1,99999
+      read(5,'(a)', end=99) line
+         if( line(1:38) .eq. 'WEIGHTED VIBRATIONAL DENSITY OF STATES' ) exit
+   end do
+   do i=1,4
+      read(5,*)
+   end do
+   do i=1,248
+      read(5,'(30x,f11.6)') int_vdos(i)
+   end do
 
    do i=1,99999
       read(5,'(a)', end=99) line
@@ -25,7 +47,7 @@ program convolute
    do i=1,1000
       read(5,'(a7,5x,f10.2,18x,f11.6)') label,freq(i),int(i)
       if( label .eq. '       ' ) exit
-      write(7,'(f7.2,f10.5)') freq(i), int(i)
+      write(7,'(f7.2,3f10.5)') freq(i), int(i), int_comp(i), int_vdos(i)
    end do
    nmodes = i-1
          
@@ -36,7 +58,7 @@ program convolute
       s = 0.0
       do i=1,nmodes
          gau = exp( -(f - freq(i))**2/128.)
-         s = s + int(i)*gau
+         s = s + int_vdos(i)*gau
       end do
       write(6,'(f6.1,f10.4)' ) f, s
    end do

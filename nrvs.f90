@@ -2,16 +2,19 @@ program nrvs
 
    implicit none
    integer nat,iat
-   parameter(nat=86)
-   real freq(3*nat), vec(3*nat,3*nat), mass(3*nat), num, den, int(3*nat), &
-         gau, f, s, rmass(3*nat), x(3*nat), massr(nat)
-   integer iset,i,j,jat,l,k,nmodes,il,imass(3*nat),nat3,mode
-   character(len=18) label(3*nat)
+   real num, den, gau, f, s
+   real, allocatable :: freq(:), vec(:,:), mass(:), int(:), rmass(:), &
+                        x(:), massr(:)
+   integer iset,i,j,jat,l,k,nmodes,il,nat3,mode
+   integer, allocatable :: imass(:)
+   character(len=18), allocatable :: label(:)
    character(len=256) line, basename
    character(len=2) atsymb
    logical adf, gaussian, jaguar, orca
 
+!  for now, following is specific to orca:
 call get_command_argument(1, basename)
+open(unit=4,file=trim(basename)//'.xyz')
 open(unit=5,file=trim(basename)//'.out')
 open(unit=6,file=trim(basename)//'.nrvs.dat')
 open(unit=7,file=trim(basename)//'.nrvs.stk')
@@ -111,13 +114,16 @@ else if( gaussian ) then
 
 else if( orca ) then
 
-   do i=1,99999
-      read(5,'(a)', end=99) line
-         if( line(7:12) .eq. '* xyz ' ) exit
-   end do
+   ! get number of atoms from xyz file:
+   read(4,*) nat
+   read(4,*)
+
+   ! allocate space:
+   allocate( freq(3*nat), vec(3*nat,3*nat), mass(3*nat), int(3*nat) )
+
    j = 0
    do i=1,nat
-      read(5,'(7x,a2)') atsymb
+      read(4,'(2x,a2)') atsymb
       if( atsymb == 'H ') then
          mass(j+1:j+3) = 1.008
       else if( atsymb == 'C ') then
@@ -291,6 +297,8 @@ end if
       write(6,'(f6.1,f10.4)' ) f, s
    end do
 
+   close(4)
+   close(5)
    close(6)
    close(7)
    stop

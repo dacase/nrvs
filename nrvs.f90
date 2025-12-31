@@ -2,14 +2,19 @@ program nrvs
 
    implicit none
    integer nat,iat
-   parameter(nat=83)
+   parameter(nat=86)
    real freq(3*nat), vec(3*nat,3*nat), mass(3*nat), num, den, int(3*nat), &
          gau, f, s, rmass(3*nat), x(3*nat), massr(nat)
    integer iset,i,j,jat,l,k,nmodes,il,imass(3*nat),nat3,mode
    character(len=18) label(3*nat)
-   character(len=256) line
+   character(len=256) line, basename
    character(len=2) atsymb
    logical adf, gaussian, jaguar, orca
+
+call get_command_argument(1, basename)
+open(unit=5,file=trim(basename)//'.out')
+open(unit=6,file=trim(basename)//'.nrvs.dat')
+open(unit=7,file=trim(basename)//'.nrvs.stk')
 
 adf = .false.
 gaussian = .false.
@@ -112,7 +117,7 @@ else if( orca ) then
    end do
    j = 0
    do i=1,nat
-      read(5,'(8x,a2)') atsymb
+      read(5,'(7x,a2)') atsymb
       if( atsymb == 'H ') then
          mass(j+1:j+3) = 1.008
       else if( atsymb == 'C ') then
@@ -255,9 +260,9 @@ end if
             num = num + mass(k)*vec(k,i)*vec(k,j)
          end do
          if ( j==i ) then
-            if (abs(num - 1.0) > 0.001) write(6,'(i5,f10.6)' ) j,num
+            if (abs(num - 1.0) > 0.001) write(0,'(i5,f10.6)' ) j,num
          else
-            if (abs(num) > 0.001) write(6,'(10x, 2i5,f10.6)' ) i,j,num
+            if (abs(num) > 0.001) write(0,'(10x, 2i5,f10.6)' ) i,j,num
          end if
       end do
    end do
@@ -265,12 +270,13 @@ end if
 !  get the intensity factor for the Fe atoms
 
    do i=1,nmodes
+      if( freq(i) .gt. 650.0 ) exit
       num = 0.0
       do j=1,3*nat
          if( abs(mass(j)-57.0)<0.1 ) num = num + mass(j)*vec(j,i)*vec(j,i)
       end do
       int(i) = num
-      write(6,'(2f10.3)') freq(i), num
+      write(7,'(f10.3,f10.5)') freq(i), num
    end do
 
 !  now, convolute this with an 8 cm**-1 Gaussian: naive implementation for now
@@ -284,6 +290,9 @@ end if
       end do
       write(6,'(f6.1,f10.4)' ) f, s
    end do
+
+   close(6)
+   close(7)
    stop
 
 99 write(0,*) 'end of file found on input'

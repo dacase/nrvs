@@ -135,7 +135,7 @@ else if( orca ) then
       else if( atsymb == 'S ') then
          mass(j+1:j+3) = 32.00
       else if( atsymb == 'Fe') then
-         mass(j+1:j+3) = 57.0
+         mass(j+1:j+3) = 55.85
       else
          write(0,*) 'unknown element: ',atsymb
          stop
@@ -144,7 +144,7 @@ else if( orca ) then
       j = j + 3
    end do
 
-   do i=1,99999
+   do i=1,9999999
       read(5,'(a)', end=99) line
          if( line(1:23) .eq. 'VIBRATIONAL FREQUENCIES' ) exit
    end do
@@ -279,7 +279,7 @@ end if
       if( freq(i) .gt. 650.0 ) exit
       num = 0.0
       do j=1,3*nat
-         if( abs(mass(j)-57.0)<0.1 ) num = num + mass(j)*vec(j,i)*vec(j,i)
+         if( abs(mass(j)-55.85)<0.1 ) num = num + mass(j)*vec(j,i)*vec(j,i)
       end do
       int(i) = num
       write(7,'(f10.3,f10.5)') freq(i), num
